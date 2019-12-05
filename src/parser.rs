@@ -11,11 +11,10 @@ use nom::{
   character::complete::{alphanumeric1, digit1},
 };
 
-// Here are the different node types. You will use these to make your parser and your grammar.
-// You may add other nodes as you see fit, but these are expected by the runtime.
 
 #[derive(Debug, Clone)]
 pub enum Node {
+  //Nodes with children
   Program { children: Vec<Node> },
   Statement { children: Vec<Node> },
   FunctionReturn { children: Vec<Node> },
@@ -23,35 +22,65 @@ pub enum Node {
   FunctionArguments { children: Vec<Node> },
   FunctionStatements { children: Vec<Node> },
   Expression { children: Vec<Node> },
+  VariableDefine { children: Vec<Node> },
+
+  //Nodes with name and children 
   MathExpression {name: String, children: Vec<Node> },
   FunctionCall { name: String, children: Vec<Node> },
-  VariableDefine { children: Vec<Node> },
+
+  //Nodes that is value
   Number { value: i32 },
   Bool { value: bool },
   Identifier { value: String },
   String { value: String },
 }
 
-// Define production rules for an identifier
-pub fn identifier(input: &str) -> IResult<&str, Node> {
-  let (input, result) = alphanumeric1(input)?;              // Consume at least 1 alphanumeric character. The ? automatically unwraps the result if it's okay and bails if it is an error.
-  Ok((input, Node::Identifier{ value: result.to_string()})) // Return the now partially consumed input, as well as a node with the string on it.
+/***********
+ * TODO:
+ * * Do string
+ * * Figure out function definition and statement 
+ ******************************************************/
+
+
+/*** Working On ****************************************************************************** */
+pub fn program(input: &str) -> IResult<&str, Node> {
+  let (input, result) = alt((expression, statement))(input)?;  
+  Ok((input, Node::Program{children: vec![result]}))       
 }
 
-// Define an integer number
+pub fn expression(input: &str) -> IResult<&str, Node> {
+  let (input, result) = alt((number, string, boolean, identifier))(input)?;
+  Ok((input, Node::Expression{children: vec![result]}))    
+}
+
 pub fn number(input: &str) -> IResult<&str, Node> {
-  let (input, result) = digit1(input)?;                     // Consume at least 1 digit 0-9
-  let number = result.parse::<i32>().unwrap();              // Parse the string result into a usize
-  Ok((input, Node::Number{ value: number}))                 // Return the now partially consumed input with a number as well
-}
-
-pub fn boolean(input: &str) -> IResult<&str, Node> {
-  unimplemented!();
+  let (input, result) = digit1(input)?;                    
+  let number = result.parse::<i32>().unwrap();              
+  Ok((input, Node::Number{ value: number}))                 
 }
 
 pub fn string(input: &str) -> IResult<&str, Node> {
-  unimplemented!();
+  let (input, result) = tag("\"")(input)?; 
+  Ok((input, Node::String{ value: result.to_string()}))   
 }
+
+pub fn identifier(input: &str) -> IResult<&str, Node> {
+  let (input, result) = alphanumeric1(input)?;              
+  Ok((input, Node::Identifier{ value: result.to_string()})) 
+}
+
+pub fn boolean(input: &str) -> IResult<&str, Node> {
+  let (input, result) = alt((tag("true"),tag("false")))(input)?;
+  let bool_value = if result == "true" {true} else {false};
+  Ok((input, Node::Bool{ value: bool_value})) 
+}
+
+pub fn function_return(input: &str) -> IResult<&str, Node> {
+  let (input, result) = expression(input)?;
+  Ok((input, Node::FunctionReturn{children: vec![result]}))    
+}
+
+/************************************************************************************** */
 
 pub fn function_call(input: &str) -> IResult<&str, Node> {
   unimplemented!();
@@ -112,17 +141,11 @@ pub fn math_expression(input: &str) -> IResult<&str, Node> {
   l1(input)
 }
 
-pub fn expression(input: &str) -> IResult<&str, Node> {
-  unimplemented!();
-}
-
 pub fn statement(input: &str) -> IResult<&str, Node> {
   unimplemented!();
 }
 
-pub fn function_return(input: &str) -> IResult<&str, Node> {
-  unimplemented!();
-}
+
 
 // Define a statement of the form
 // let x = expression
@@ -153,11 +176,4 @@ pub fn comment(input: &str) -> IResult<&str, Node> {
   unimplemented!();
 }
 
-// Define a program. You will change this, this is just here for example.
-// You'll probably want to modify this by changing it to be that a program
-// is defined as at least one function definition, but maybe more. Start
-// by looking up the many1() combinator and that should get you started.
-pub fn program(input: &str) -> IResult<&str, Node> {
-  let (input, result) = alt((number, identifier))(input)?;  // Now that we've defined a number and an identifier, we can compose them using more combinators. Here we use the "alt" combinator to propose a choice.
-  Ok((input, Node::Program{ children: vec![result]}))       // Whether the result is an identifier or a number, we attach that to the program
-}
+
