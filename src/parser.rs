@@ -4,11 +4,13 @@
 
 use nom::{
   IResult,
+  separated_list,
   branch::alt,
+  sequence::delimited,
   combinator::opt,
-  multi::{many1, many0},
+  multi::{many1, many0, separated_list},
   bytes::complete::{tag},
-  character::complete::{alphanumeric1, digit1},
+  character::complete::{alphanumeric1, digit1, space1},
 };
 
 
@@ -37,21 +39,43 @@ pub enum Node {
 
 /***********
  * TODO:
- * * Do string
- * * Figure out function definition and statement 
+ * * Figure out arguments function
+ * * Function_call
+ * * Figure out function definition and statement
+ * * function args sperlated list (",",exp )
  ******************************************************/
 
 
 /*** Working On ****************************************************************************** */
+pub fn function_call(input: &str) -> IResult<&str, Node> {
+  let (input, result) = identifier(input)?;
+  let function_name: String = match result {
+    Node::Identifier{value} => value.clone(),
+    _ => "".to_string(),
+  };
+  let (input, args) = arguments(input)?;
+  Ok((input, Node::FunctionCall{name: function_name, children: vec![args]}))
+}
+
+pub fn arguments(input: &str) -> IResult<&str, Node> {
+  let exp = string(input)?;
+  //let (input, result) = separated_list!(",", exp)(input)?;
+  Ok((input, Node::FunctionArguments{ children: vec![result]}))
+}
+/*********************************************************************************************** */
 pub fn program(input: &str) -> IResult<&str, Node> {
   let (input, result) = alt((expression, statement))(input)?;  
   Ok((input, Node::Program{children: vec![result]}))       
 }
 
 pub fn expression(input: &str) -> IResult<&str, Node> {
-  let (input, result) = alt((number, string, boolean, identifier))(input)?;
+  let (input, result) = alt((number, function_call, string, boolean, identifier))(input)?;
   Ok((input, Node::Expression{children: vec![result]}))    
 }
+
+// pub fn math_expression(input: &str) -> IResult<&str, Node> {
+//   l1(input)
+// }
 
 pub fn number(input: &str) -> IResult<&str, Node> {
   let (input, result) = digit1(input)?;                    
@@ -59,14 +83,17 @@ pub fn number(input: &str) -> IResult<&str, Node> {
   Ok((input, Node::Number{ value: number}))                 
 }
 
-pub fn string(input: &str) -> IResult<&str, Node> {
-  let (input, result) = tag("\"")(input)?; 
-  Ok((input, Node::String{ value: result.to_string()}))   
-}
+// pub fn function_call(input: &str) -> IResult<&str, Node> {
+//
+// }
 
-pub fn identifier(input: &str) -> IResult<&str, Node> {
-  let (input, result) = alphanumeric1(input)?;              
-  Ok((input, Node::Identifier{ value: result.to_string()})) 
+pub fn string(input: &str) -> IResult<&str, Node> {  
+  let (input, result) = delimited(tag("\""), many1(alt((alphanumeric1, space1))), tag("\""))(input)?;
+  let mut result_string = String::new();
+  for x in result {
+    result_string.push_str(&x.to_string())
+}
+  Ok((input, Node::String{ value: result_string}))
 }
 
 pub fn boolean(input: &str) -> IResult<&str, Node> {
@@ -75,15 +102,20 @@ pub fn boolean(input: &str) -> IResult<&str, Node> {
   Ok((input, Node::Bool{ value: bool_value})) 
 }
 
+pub fn identifier(input: &str) -> IResult<&str, Node> {
+  let (input, result) = alphanumeric1(input)?;              
+  Ok((input, Node::Identifier{ value: result.to_string()})) 
+}
+
+pub fn comment(input: &str) -> IResult<&str, Node> {
+  let (input, result) = identifier(input)?;             
+  Ok((input, Node::Identifier{value: "".to_string()}))
+}
+/************************************************************************************** */
+
 pub fn function_return(input: &str) -> IResult<&str, Node> {
   let (input, result) = expression(input)?;
   Ok((input, Node::FunctionReturn{children: vec![result]}))    
-}
-
-/************************************************************************************** */
-
-pub fn function_call(input: &str) -> IResult<&str, Node> {
-  unimplemented!();
 }
 
 // Math expressions with parens (1 * (2 + 3))
@@ -137,9 +169,7 @@ pub fn l1(input: &str) -> IResult<&str, Node> {
   Ok((input, head))
 }
 
-pub fn math_expression(input: &str) -> IResult<&str, Node> {
-  l1(input)
-}
+
 
 pub fn statement(input: &str) -> IResult<&str, Node> {
   unimplemented!();
@@ -159,10 +189,6 @@ pub fn variable_define(input: &str) -> IResult<&str, Node> {
   Ok((input, Node::VariableDefine{ children: vec![variable, expression]}))   
 }
 
-pub fn arguments(input: &str) -> IResult<&str, Node> {
-  unimplemented!();
-}
-
 // Like the first argument but with a comma in front
 pub fn other_arg(input: &str) -> IResult<&str, Node> {
   unimplemented!();
@@ -172,8 +198,6 @@ pub fn function_definition(input: &str) -> IResult<&str, Node> {
   unimplemented!();
 }
 
-pub fn comment(input: &str) -> IResult<&str, Node> {
-  unimplemented!();
-}
+
 
 
