@@ -31,6 +31,23 @@ pub enum Node {
   String { value: String },
 }
 
+pub fn function_call(input: &str) -> IResult<&str, Node> {
+  let (input, result) = identifier(input)?;
+  let function_name: String = match result {
+    Node::Identifier{value} => value.clone(),
+    _ => "".to_string(),
+  };
+  let (input, args) = arguments(input)?;
+  Ok((input, Node::FunctionCall{name: function_name, children: vec![args]}))
+}
+
+pub fn arguments(input: &str) -> IResult<&str, Node> {
+  let(input, _) = tag("(")(input)?;
+  let (input, result) = separated_list(tag(","), expression)(input)?;
+  let(input, _) = tag(")")(input)?;
+  Ok((input, Node::FunctionArguments{ children: result}))
+}
+
 pub fn number(input: &str) -> IResult<&str, Node> {
   let (input, result) = digit1(input)?;                    
   let number = result.parse::<i32>().unwrap();              
@@ -62,34 +79,18 @@ pub fn comment(input: &str) -> IResult<&str, Node> {
   Ok((input, Node::Identifier{value: "".to_string()}))
 }
 
-/*** Working On ****************************************************************************** */
-/** Key issues
- * Fails when its in the proper order in tree branch for expression ==> Should not happen
- * Has issues with parentences 
+/*TODO:
+ * Figure out parenthetical_expression
+ * Figure out function_definition
  */
-
-pub fn function_call(input: &str) -> IResult<&str, Node> {
-  let (input, result) = identifier(input)?;
-  let function_name: String = match result {
-    Node::Identifier{value} => value.clone(),
-    _ => "".to_string(),
-  }; 
-  let (input, args) = arguments(input)?;
-  Ok((input, Node::FunctionCall{name: function_name, children: vec![args]}))
-}
-
-pub fn arguments(input: &str) -> IResult<&str, Node> {
-  let (input, result) = separated_list(tag(","), expression)(input)?;
-  Ok((input, Node::FunctionArguments{ children: result}))
-}
 /*********************************************************************************************** */
 pub fn program(input: &str) -> IResult<&str, Node> {
-  let (input, result) = alt((function_definition, statement, expression))(input)?;  
-  Ok((input, Node::Program{children: vec![result]}))       
+  let (input, result) = many1(alt((function_definition, statement, expression)))(input)?;  
+  Ok((input, Node::Program{children: result}))       
 } 
 
 pub fn expression(input: &str) -> IResult<&str, Node> {
-  let (input, result) = alt((boolean, string, math_expression, number, identifier, function_call))(input)?;
+  let (input, result) = alt((function_call, boolean, string, math_expression, number, identifier))(input)?;
   Ok((input, Node::Expression{children: vec![result]}))    
 }
 /************************************************************************************** */
@@ -167,21 +168,23 @@ pub fn l3_infix(input: &str) -> IResult<&str, Node> {
   Ok((input, Node::MathExpression{name: op.to_string(), children: vec![args]}))
 }
 pub fn l4(input: &str) -> IResult<&str, Node> {
-  alt((number, identifier, parenthetical_expression))(input) //Fix function_call and add to l4 // parenthetical_expression
+  alt((parenthetical_expression, number, identifier, function_call))(input)
 }
 // Math expressions with parens (1 * (2 + 3))
 pub fn parenthetical_expression(input: &str) -> IResult<&str, Node> {
-  unimplemented!();
+  let (input, _) = tag("(")(input)?;
+  let (input, result) = math_expression(input)?;
+  let (input, _) = tag("(")(input)?;
+  Ok((input, result))
 }
 
 /*** Define a statement of the form *********************************************************************** */
 pub fn statement(input: &str) -> IResult<&str, Node> {
-  let (input, result) = variable_define(input)?;
+  let (input, result) = alt((function_return, variable_define))(input)?;
   let (input, _) = tag(";")(input)?;
   Ok((input, Node::Statement{children: vec![result]}))   
 }
 
-// let x = expression
 pub fn variable_define(input: &str) -> IResult<&str, Node> {
   let (input, _) = tag("let ")(input)?;
   let (input, variable) = identifier(input)?;
@@ -200,10 +203,6 @@ pub fn function_return(input: &str) -> IResult<&str, Node> {
   Ok((input, Node::FunctionReturn{ children: vec![stat] })) 
 }
 /****************************************************************************************** */
-// Like the first argument but with a comma in front
-pub fn other_arg(input: &str) -> IResult<&str, Node> {
-  unimplemented!();
-}
 
 pub fn function_definition(input: &str) -> IResult<&str, Node> {
   let (input, _) = tag("fn")(input)?;
@@ -216,7 +215,7 @@ pub fn function_definition(input: &str) -> IResult<&str, Node> {
   let (input, _) = many0(tag(" "))(input)?;
   let (input, _) = tag("{")(input)?;
   let (input, _) = many0(tag(" "))(input)?;
-  let (input, mut stats) = many1(statement)(input)?;
+  let (input, mut stats) = many1(alt((statement, expression)))(input)?;
   let (input, _) = many0(tag(" "))(input)?;
   let (input, _) = tag("}")(input)?;
   let (input, _) = many0(tag(" "))(input)?;
