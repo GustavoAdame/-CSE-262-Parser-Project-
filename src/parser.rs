@@ -1,5 +1,5 @@
 /*
-Passed 23/28 test
+Passed 25/28 test
 function_call, boolean, string, math_expression, number, identifier
 */
 use nom::{
@@ -10,7 +10,7 @@ use nom::{
   combinator::opt,
   multi::{many1, many0, separated_list},
   bytes::complete::{tag},
-  character::complete::{alphanumeric1, digit1, space1},
+  character::complete::{alphanumeric1, digit1, space1, multispace0},
 };
 
 #[derive(Debug, Clone)]
@@ -94,8 +94,9 @@ pub fn expression(input: &str) -> IResult<&str, Node> {
   Ok((input, Node::Expression{children: vec![result]}))    
 }
 /************************************************************************************** */
-pub fn math_expression(input: &str) -> IResult<&str, Node> {
-    l1(input)
+pub fn math_expression(input: &str) -> IResult<&str, Node> { 
+  l1(input)
+   
 }
 
 pub fn l1(input: &str) -> IResult<&str, Node> {
@@ -115,9 +116,9 @@ pub fn l1(input: &str) -> IResult<&str, Node> {
 }
 
 pub fn l1_infix(input: &str) -> IResult<&str, Node> {
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, op) = alt((tag("+"),tag("-")))(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, args) = l2(input)?;
   Ok((input, Node::MathExpression{name: op.to_string(), children: vec![args]}))
 
@@ -138,9 +139,9 @@ pub fn l2(input: &str) -> IResult<&str, Node> {
   Ok((input, head))
 }
 pub fn l2_infix(input: &str) -> IResult<&str, Node> {
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, op) = alt((tag("*"),tag("/")))(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, args) = l3(input)?;
   Ok((input, Node::MathExpression{name: op.to_string(), children: vec![args]}))
 }
@@ -161,14 +162,14 @@ pub fn l3(input: &str) -> IResult<&str, Node> {
   Ok((input, head))
 }
 pub fn l3_infix(input: &str) -> IResult<&str, Node> {
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, op) = tag("^")(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, args) = l4(input)?;
   Ok((input, Node::MathExpression{name: op.to_string(), children: vec![args]}))
 }
 pub fn l4(input: &str) -> IResult<&str, Node> {
-  alt((parenthetical_expression, number, identifier, function_call))(input)
+  alt((parenthetical_expression, number, identifier, function_call ))(input)
 }
 // Math expressions with parens (1 * (2 + 3))
 pub fn parenthetical_expression(input: &str) -> IResult<&str, Node> {
@@ -188,37 +189,34 @@ pub fn statement(input: &str) -> IResult<&str, Node> {
 pub fn variable_define(input: &str) -> IResult<&str, Node> {
   let (input, _) = tag("let ")(input)?;
   let (input, variable) = identifier(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, _) = tag("=")(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, expression) = expression(input)?;
   Ok((input, Node::VariableDefine{ children: vec![variable, expression]}))   
 }
 
 pub fn function_return(input: &str) -> IResult<&str, Node> {
   let (input, _) = tag("return")(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, stat) = expression(input)?; 
-  let (input, _) = tag(";")(input)?;
   Ok((input, Node::FunctionReturn{ children: vec![stat] })) 
 }
 /****************************************************************************************** */
 
 pub fn function_definition(input: &str) -> IResult<&str, Node> {
   let (input, _) = tag("fn")(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, name) = identifier(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
-  let (input, _) = tag("(")(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, arg) = arguments(input)?;
-  let (input, _) = tag(")")(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, _) = tag("{")(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, mut stats) = many1(alt((statement, expression)))(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, _) = tag("}")(input)?;
-  let (input, _) = many0(tag(" "))(input)?;
+  let (input, _) = multispace0(input)?;
   let mut theVec = vec![name, arg];
   theVec.append(&mut stats);
   Ok((input, Node::FunctionDefine { children: theVec }))
