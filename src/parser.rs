@@ -1,5 +1,5 @@
 /*
-Passed 25/28 test
+Passed 27/28 test
 function_call, boolean, string, math_expression, number, identifier
 */
 use nom::{
@@ -32,7 +32,9 @@ pub enum Node {
 }
 
 pub fn function_call(input: &str) -> IResult<&str, Node> {
+  let (input, _) = multispace0(input)?;
   let (input, result) = identifier(input)?;
+  let (input, _) = multispace0(input)?;
   let function_name: String = match result {
     Node::Identifier{value} => value.clone(),
     _ => "".to_string(),
@@ -42,9 +44,13 @@ pub fn function_call(input: &str) -> IResult<&str, Node> {
 }
 
 pub fn arguments(input: &str) -> IResult<&str, Node> {
+  let (input, _) = multispace0(input)?;
   let(input, _) = tag("(")(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, result) = separated_list(tag(","), expression)(input)?;
+  let (input, _) = multispace0(input)?;
   let(input, _) = tag(")")(input)?;
+  let (input, _) = multispace0(input)?;
   Ok((input, Node::FunctionArguments{ children: result}))
 }
 
@@ -98,7 +104,6 @@ pub fn math_expression(input: &str) -> IResult<&str, Node> {
   l1(input)
    
 }
-
 pub fn l1(input: &str) -> IResult<&str, Node> {
   let (input, mut head) = l2(input)?;
   let (input, tail) = many0(l1_infix)(input)?;
@@ -181,13 +186,17 @@ pub fn parenthetical_expression(input: &str) -> IResult<&str, Node> {
 
 /*** Define a statement of the form *********************************************************************** */
 pub fn statement(input: &str) -> IResult<&str, Node> {
+  let (input, _) = multispace0(input)?;
   let (input, result) = alt((function_return, variable_define))(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, _) = tag(";")(input)?;
   Ok((input, Node::Statement{children: vec![result]}))   
 }
 
 pub fn variable_define(input: &str) -> IResult<&str, Node> {
+  let (input, _) = multispace0(input)?;
   let (input, _) = tag("let ")(input)?;
+  let (input, _) = multispace0(input)?;
   let (input, variable) = identifier(input)?;
   let (input, _) = multispace0(input)?;
   let (input, _) = tag("=")(input)?;
@@ -222,4 +231,4 @@ pub fn function_definition(input: &str) -> IResult<&str, Node> {
   Ok((input, Node::FunctionDefine { children: theVec }))
 }
 
-
+ 
