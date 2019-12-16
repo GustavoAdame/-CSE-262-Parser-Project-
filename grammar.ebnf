@@ -1,23 +1,50 @@
-function_definition
-program
-identifier
-number
-boolean
-string
-function_call
-parenthetical_expression
-l4
-l3_infix
-l3
-l2_infix
-l2
-l1_infix
-l1
-math_expression
-expression
-statement
-function_return
-variable_define
-arguments
-other_arg
-comment
+program = 
+function_definition | statement | expression
+;
+expression = 
+function_call | boolean | math_expression | string | number | identifier
+;
+statement =
+(function_return | variable_define), ";" 
+;
+function_call =
+identifier, arguments
+; 
+math_expression = l1;
+l1 = l2, l1_infix;
+l1_infix = ("+" | "-"), l2; 
+l2 = l3, l2_infix; 
+l2_infix = ("*" | "/"), l3;
+l3 = l4, l3_infix;
+l3_infix = "^", l4;
+l4 = parenthetical_expression | number | identifier | function_call;
+parenthetical_expression = "(", expression, ")";
+
+function_definition =
+"fn ", identifier, arguments, " { ", (statement | expression), " } " 
+;
+variable_define =
+"let ", identifier, " = ", expression 
+;
+function_return =
+"return ", expression 
+;
+
+(* Defined by alphanumeric1 *)
+identifier = 
+(0-9) | (a-z) | (A-Z)
+;
+arguments =
+"(", [","]expression, ")"
+;
+boolean =
+"true" | "false"
+;
+string =
+"\"", (identifier | " "), "\""
+;
+(* Defined by digit1 *)
+number =
+0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+;
+comment = identifier;
